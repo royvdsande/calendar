@@ -7,6 +7,7 @@ import { SyncPanel } from "@/components/dashboard/sync-panel";
 import { TaskBoard } from "@/components/dashboard/task-board";
 import { Card } from "@/components/ui/card";
 import { authOptions } from "@/lib/auth";
+import { demoEvents, demoTasks } from "@/lib/demo-data";
 import { prisma } from "@/lib/prisma";
 
 type DashboardPageProps = {
@@ -22,9 +23,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     console.error("Failed to load session in dashboard page", error);
   }
 
-  if (!session?.user?.id) return null;
-
   const tab = (await searchParams).tab || "overview";
+  const userId = session?.user?.id || null;
+  const isGuest = !userId;
 
   let tasks: {
     id: string;
@@ -41,13 +42,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   }[] = [];
   let dataUnavailable = false;
 
-  if (!prisma) {
+  if (isGuest) {
+    tasks = demoTasks.map((task) => ({
+      ...task,
+      dueDate: task.dueDate ? new Date(task.dueDate) : null
+    }));
+    events = demoEvents.map((event) => ({
+      ...event,
+      start: new Date(event.start)
+    }));
+  } else if (!prisma) {
     dataUnavailable = true;
   } else {
     try {
       const [taskRows, eventRows] = await Promise.all([
-        prisma.task.findMany({ where: { userId: session.user.id }, orderBy: { order: "asc" } }),
-        prisma.calendarEvent.findMany({ where: { userId: session.user.id }, orderBy: { start: "asc" } })
+        prisma.task.findMany({ where: { userId }, orderBy: { order: "asc" } }),
+        prisma.calendarEvent.findMany({ where: { userId }, orderBy: { start: "asc" } })
       ]);
 
       tasks = taskRows;
@@ -81,6 +91,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <div className="space-y-6">
+      {isGuest && (
+        <Card>
+          <p className="text-sm text-amber-600">
+            Je bekijkt nu een preview van dashboard + calendar. Log in om je eigen data te zien en alles te bewerken.
+          </p>
+        </Card>
+      )}
+
       {dataUnavailable && (
         <Card>
           <p className="text-sm text-amber-600">
@@ -104,12 +122,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </Card>
       </div>
 
-      {showSync && <SyncPanel />}
+      {showSync && <SyncPanel readOnly={isGuest} />}
 
       {showCalendar && <CalendarView events={calendarItems} />}
 
       {showTasks && (
         <TaskBoard
+          readOnly={isGuest}
           initialTasks={tasks.map((task) => ({
             id: task.id,
             title: task.title,

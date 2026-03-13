@@ -1,6 +1,5 @@
 export const dynamic = "force-dynamic";
 
-import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import { DashboardHeader } from "@/components/dashboard/header";
@@ -16,13 +15,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     console.error("Failed to load session in dashboard layout", error);
   }
 
-  if (!session) redirect("/login");
+  const isGuest = !session;
 
   return (
     <div className="min-h-screen md:flex">
       <Sidebar />
       <div className="flex-1">
-        <DashboardHeader name={session.user.name} />
+        <DashboardHeader name={session?.user?.name || "Guest preview"} isGuest={isGuest} />
         <main className="p-4">{children}</main>
       </div>
     </div>
