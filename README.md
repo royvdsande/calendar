@@ -1,87 +1,140 @@
-# Productive – Calendar + To-do SaaS Starter
+# Productive — Calendar + To-Do SaaS
 
-A production-focused full-stack Next.js application that unifies personal tasks and calendar planning in one modern dashboard.
+A production-ready full-stack productivity dashboard that merges tasks and calendar planning in one interface (inspired by Todoist/TickTick workflows).
 
-## Stack
-- Next.js 15 (App Router) + TypeScript
-- Tailwind CSS + shadcn-style UI primitives
-- NextAuth (credentials + Google OAuth)
-- Prisma + PostgreSQL
-- Google Calendar API sync
-- Stripe-ready environment structure
+## 1) Tech Stack
+- **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn-style UI
+- **Backend:** Next.js Route Handlers (`app/api/*`)
+- **Database:** PostgreSQL + Prisma ORM
+- **Authentication:** NextAuth (Credentials + Google OAuth)
+- **Integrations:** Google Calendar API (read + sync)
+- **Payments (ready):** Stripe environment + utility scaffold
 
-## Features
-- Secure sign up + sign in with credentials
+## 2) Core Features
+- Email/password sign up + login
 - Google OAuth login
 - Protected dashboard routes
-- Task CRUD (create, complete, delete, due dates)
-- Drag-and-drop task ordering UI
-- Unified month calendar rendering app events + Google events
-- One-click Google Calendar sync endpoint
-- Dark/light mode
-- Loading-ready UI primitives and empty states
+- Task CRUD (create, complete, delete)
+- Optional task tags and due dates
+- Drag-and-drop tasks with persisted order
+- Calendar with **Day / Week / Month** modes
+- Unified calendar showing app tasks + synced Google events
+- One-click Google Calendar sync panel
+- Dark mode / light mode
+- Empty states and responsive layout
 
-## Project Structure
+## 3) Project Structure
 ```txt
 app/
-  (auth)/login, signup
+  (auth)/login
+  (auth)/signup
   (dashboard)/dashboard
   api/
+    auth/[...nextauth]
+    register
+    tasks
+    tasks/[taskId]
+    calendar/sync
+    events
 components/
-hooks/
+  dashboard/
+  ui/
 lib/
+hooks/
 prisma/
 ```
 
-## Setup
-1. Install dependencies:
+## 4) Database Models
+Defined in `prisma/schema.prisma`:
+- `User`
+- `Task`
+- `CalendarEvent`
+- `ConnectedGoogleAccount`
+- NextAuth support models: `Account`, `Session`, `VerificationToken`
+
+## 5) Local Development Setup
+
+### Prerequisites
+- Node.js 20+
+- PostgreSQL 14+
+
+### Install & run
 ```bash
 npm install
-```
-2. Copy env file:
-```bash
 cp .env.example .env
 ```
-3. Set up PostgreSQL and update `DATABASE_URL`.
-4. Run Prisma:
+
+Set values in `.env`, then:
 ```bash
 npm run prisma:generate
 npm run prisma:migrate -- --name init
-```
-5. Start dev server:
-```bash
 npm run dev
 ```
 
-## Google Calendar Setup
+Open: `http://localhost:3000`
+
+## 6) Environment Variables
+Use `.env.example` as reference.
+
+Required for core app:
+- `DATABASE_URL`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+
+Optional (future billing):
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+
+Generate secret:
+```bash
+openssl rand -base64 32
+```
+
+## 7) Google Calendar API Setup
 1. Go to Google Cloud Console.
-2. Create OAuth credentials for web app.
-3. Add callback URL:
-   - `http://localhost:3000/api/auth/callback/google`
-4. Enable Google Calendar API.
-5. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
-6. Sign in with Google and call `POST /api/calendar/sync` to import events.
+2. Create/select a project.
+3. Enable **Google Calendar API**.
+4. Configure OAuth consent screen.
+5. Create OAuth Client ID (**Web application**).
+6. Add Authorized redirect URI(s):
+   - Local: `http://localhost:3000/api/auth/callback/google`
+   - Vercel: `https://YOUR_DOMAIN/api/auth/callback/google`
+7. Copy client ID/secret into env vars.
+8. Sign in with Google, then in dashboard run **Sync now**.
 
-## Stripe Setup (future premium features)
-1. Create Stripe account and retrieve keys.
-2. Populate:
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-   - `STRIPE_SECRET_KEY`
-   - `STRIPE_WEBHOOK_SECRET`
-3. Use `lib/stripe.ts` to initialize payment flows.
+## 8) Stripe Setup (optional scaffold)
+1. Create Stripe account.
+2. Copy publishable + secret + webhook secret into env vars.
+3. Extend `lib/stripe.ts` when enabling premium plans.
 
-## Deploy to Vercel
-1. Push repository to GitHub.
-2. Import project in Vercel.
-3. Add all environment variables from `.env.example`.
-4. Configure a hosted PostgreSQL instance.
-5. In build settings, ensure Prisma generate runs:
-   - `npm run prisma:generate && npm run build`
+## 9) Deploying to Vercel (GitHub connected)
 
-## Deploy to GitHub Pages (automatic)
-1. Push to the `main` branch.
-2. In GitHub, go to **Settings → Pages** and set **Source** to **GitHub Actions** (one-time).
-3. Every new push to `main` deploys automatically without extra commands.
+Since GitHub + Vercel are already connected, use this checklist:
 
-The app now auto-detects the GitHub repository path during Actions builds, so assets and routes work under `https://<user>.github.io/<repo>/` with no manual basePath setup.
+1. Push your branch to GitHub.
+2. In Vercel project settings, set **Root Directory** to repo root.
+3. Add all environment variables from `.env.example` for Production/Preview.
+4. Attach a production PostgreSQL database (Neon, Supabase, RDS, etc.).
+5. Confirm Build Command (also in `vercel.json`):
+   ```bash
+   npm run prisma:generate && npm run build
+   ```
+6. (Recommended) Set Install Command to `npm install`.
+7. Deploy.
 
+### Important for Prisma on Vercel
+- Prisma Client must be generated during build (already handled).
+- After first production DB setup, run migrations against production DB:
+  ```bash
+  npx prisma migrate deploy
+  ```
+  You can run this from CI or manually with production env vars.
+
+## 10) Suggested Production Hardening
+- Add rate limiting to auth and mutating routes.
+- Add background sync job for Google events (cron).
+- Add Sentry/Logtail monitoring.
+- Add e2e tests (Playwright) and CI checks.
