@@ -6,6 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { taskSchema } from "@/lib/validations";
 
 export async function POST(req: Request) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+  }
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
@@ -6,7 +8,14 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { authOptions } from "@/lib/auth";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions);
+  let session = null;
+
+  try {
+    session = await getServerSession(authOptions);
+  } catch (error) {
+    console.error("Failed to load session in dashboard layout", error);
+  }
+
   if (!session) redirect("/login");
 
   return (

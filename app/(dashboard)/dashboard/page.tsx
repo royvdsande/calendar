@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getServerSession } from "next-auth";
 
 import { CalendarView } from "@/components/dashboard/calendar-view";
@@ -12,15 +14,49 @@ type DashboardPageProps = {
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const session = await getServerSession(authOptions);
+  let session = null;
+
+  try {
+    session = await getServerSession(authOptions);
+  } catch (error) {
+    console.error("Failed to load session in dashboard page", error);
+  }
+
   if (!session?.user?.id) return null;
 
   const tab = (await searchParams).tab || "overview";
 
-  const [tasks, events] = await Promise.all([
-    prisma.task.findMany({ where: { userId: session.user.id }, orderBy: { order: "asc" } }),
-    prisma.calendarEvent.findMany({ where: { userId: session.user.id }, orderBy: { start: "asc" } })
-  ]);
+  let tasks: {
+    id: string;
+    title: string;
+    dueDate: Date | null;
+    completed: boolean;
+    tag: string | null;
+  }[] = [];
+  let events: {
+    id: string;
+    title: string;
+    start: Date;
+    source: "APP" | "GOOGLE";
+  }[] = [];
+  let dataUnavailable = false;
+
+  if (!prisma) {
+    dataUnavailable = true;
+  } else {
+    try {
+      const [taskRows, eventRows] = await Promise.all([
+        prisma.task.findMany({ where: { userId: session.user.id }, orderBy: { order: "asc" } }),
+        prisma.calendarEvent.findMany({ where: { userId: session.user.id }, orderBy: { start: "asc" } })
+      ]);
+
+      tasks = taskRows;
+      events = eventRows;
+    } catch (error) {
+      dataUnavailable = true;
+      console.error("Failed to load dashboard data", error);
+    }
+  }
 
   const calendarItems = [
     ...events.map((event) => ({
@@ -45,6 +81,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <div className="space-y-6">
+      {dataUnavailable && (
+        <Card>
+          <p className="text-sm text-amber-600">
+            We konden je data nu niet laden. De UI blijft beschikbaar, maar controleer je database- en auth-instellingen.
+          </p>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <p className="text-sm text-gray-500">Total Tasks</p>
