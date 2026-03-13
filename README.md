@@ -77,3 +77,11 @@ npm run dev
 4. Configure a hosted PostgreSQL instance.
 5. In build settings, ensure Prisma generate runs:
    - `npm run prisma:generate && npm run build`
+
+## Deploy to GitHub Pages (automatic)
+1. Push to the `main` branch.
+2. In GitHub, go to **Settings → Pages** and set **Source** to **GitHub Actions** (one-time).
+3. Every new push to `main` deploys automatically without extra commands.
+
+The app now auto-detects the GitHub repository path during Actions builds, so assets and routes work under `https://<user>.github.io/<repo>/` with no manual basePath setup.
+
