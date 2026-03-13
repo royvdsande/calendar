@@ -6,47 +6,57 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { prisma } from "@/lib/prisma";
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const hasGoogleAuth = Boolean(googleClientId && googleClientSecret);
+
+const providers = [
+  ...(hasGoogleAuth
+    ? [
+        GoogleProvider({
+          clientId: googleClientId as string,
+          clientSecret: googleClientSecret as string,
+          authorization: {
+            params: {
+              scope:
+                "openid email profile https://www.googleapis.com/auth/calendar.readonly"
+            }
+          }
+        })
+      ]
+    : []),
+  CredentialsProvider({
+    name: "credentials",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" }
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials.password || !prisma) return null;
+
+      const user = await prisma.user.findUnique({
+        where: { email: credentials.email }
+      });
+
+      if (!user?.passwordHash) return null;
+
+      const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+      if (!isValid) return null;
+
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        image: user.image
+      };
+    }
+  })
+];
+
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  ...(prisma ? { adapter: PrismaAdapter(prisma) } : {}),
   session: { strategy: "jwt" },
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-      authorization: {
-        params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/calendar.readonly"
-        }
-      }
-    }),
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) return null;
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
-
-        if (!user?.passwordHash) return null;
-
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
-        if (!isValid) return null;
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image
-        };
-      }
-    })
-  ],
+  providers,
   callbacks: {
     async jwt({ token, user }) {
       if (user) token.id = user.id;
