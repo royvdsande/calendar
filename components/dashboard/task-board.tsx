@@ -28,6 +28,7 @@ type Task = {
   title: string;
   dueDate: string | null;
   completed: boolean;
+  tag?: string | null;
 };
 
 function SortableTask({ task, onToggle, onDelete }: { task: Task; onToggle: (id: string) => void; onDelete: (id: string) => void }) {
@@ -39,7 +40,10 @@ function SortableTask({ task, onToggle, onDelete }: { task: Task; onToggle: (id:
       <Card className="mb-2 flex items-center justify-between">
         <div>
           <p className={task.completed ? "line-through opacity-60" : ""}>{task.title}</p>
-          {task.dueDate && <p className="text-xs text-gray-500">Due {new Date(task.dueDate).toDateString()}</p>}
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            {task.dueDate && <p>Due {new Date(task.dueDate).toDateString()}</p>}
+            {task.tag && <p className="rounded bg-accent px-2 py-0.5 text-xs">#{task.tag}</p>}
+          </div>
         </div>
         <div className="space-x-2">
           <Button variant="ghost" onClick={() => onToggle(task.id)}>
@@ -58,6 +62,7 @@ export function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [tag, setTag] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -69,7 +74,7 @@ export function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, dueDate: dueDate || undefined })
+      body: JSON.stringify({ title, dueDate: dueDate || undefined, tag: tag || undefined })
     });
 
     if (!res.ok) return toast.error("Could not create task");
@@ -77,6 +82,7 @@ export function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
     setTasks((prev) => [task, ...prev]);
     setTitle("");
     setDueDate("");
+    setTag("");
   }
 
   async function toggleTask(id: string) {
@@ -102,16 +108,28 @@ export function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
     if (!over || active.id === over.id) return;
     const oldIndex = tasks.findIndex((t) => t.id === active.id);
     const newIndex = tasks.findIndex((t) => t.id === over.id);
-    setTasks((prev) => arrayMove(prev, oldIndex, newIndex));
+    const reordered = arrayMove(tasks, oldIndex, newIndex);
+    setTasks(reordered);
+
+    await Promise.all(
+      reordered.map((task, index) =>
+        fetch(`/api/tasks/${task.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: index + 1 })
+        })
+      )
+    );
   }
 
   return (
     <div className="space-y-4">
       <Card>
         <p className="mb-3 text-sm font-medium">Create task</p>
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="grid gap-2 md:grid-cols-4">
           <Input placeholder="e.g. Plan sprint" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <Input placeholder="Tag (optional)" value={tag} onChange={(e) => setTag(e.target.value)} />
           <Button onClick={createTask}>Add task</Button>
         </div>
       </Card>

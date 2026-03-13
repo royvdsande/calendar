@@ -15,5 +15,7 @@ export const taskSchema = z.object({
 export const taskUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   completed: z.boolean().optional(),
-  dueDate: z.string().nullable().optional()
+  dueDate: z.string().nullable().optional(),
+  tag: z.string().nullable().optional(),
+  order: z.number().int().nonnegative().optional()
 });
