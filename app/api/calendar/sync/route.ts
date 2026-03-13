@@ -6,6 +6,10 @@ import { fetchGoogleCalendarEvents } from "@/lib/google-calendar";
 import { prisma } from "@/lib/prisma";
 
 export async function POST() {
+  if (!prisma) {
+    return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+  }
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

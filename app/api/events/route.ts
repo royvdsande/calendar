@@ -5,6 +5,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
+  if (!prisma) {
+    return NextResponse.json({ error: "Database unavailable", events: [] }, { status: 503 });
+  }
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
