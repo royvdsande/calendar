@@ -10,6 +10,10 @@ type TaskRouteContext = {
 };
 
 export async function PATCH(req: Request, { params }: TaskRouteContext) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+  }
+
   const { taskId } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,6 +42,10 @@ export async function PATCH(req: Request, { params }: TaskRouteContext) {
 }
 
 export async function DELETE(_: Request, { params }: TaskRouteContext) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+  }
+
   const { taskId } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

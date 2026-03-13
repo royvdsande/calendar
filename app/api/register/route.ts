@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
 
 export async function POST(req: Request) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+  }
+
   const body = await req.json();
   const parsed = registerSchema.safeParse(body);
 
