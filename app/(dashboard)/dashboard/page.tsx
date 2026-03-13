@@ -85,6 +85,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       }))
   ];
 
+  const showSummary = tab === "overview";
   const showCalendar = tab === "overview" || tab === "calendar";
   const showTasks = tab === "overview" || tab === "tasks";
   const showSync = tab === "overview" || tab === "sync";
@@ -107,24 +108,26 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <p className="text-sm text-gray-500">Total Tasks</p>
-          <p className="text-2xl font-semibold">{tasks.length}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-gray-500">Completed</p>
-          <p className="text-2xl font-semibold">{tasks.filter((t) => t.completed).length}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-gray-500">Upcoming Events</p>
-          <p className="text-2xl font-semibold">{events.length}</p>
-        </Card>
-      </div>
+      {showSummary && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <p className="text-sm text-gray-500">Total Tasks</p>
+            <p className="text-2xl font-semibold">{tasks.length}</p>
+          </Card>
+          <Card>
+            <p className="text-sm text-gray-500">Completed</p>
+            <p className="text-2xl font-semibold">{tasks.filter((t) => t.completed).length}</p>
+          </Card>
+          <Card>
+            <p className="text-sm text-gray-500">Upcoming Events</p>
+            <p className="text-2xl font-semibold">{events.length}</p>
+          </Card>
+        </div>
+      )}
 
       {showSync && <SyncPanel readOnly={isGuest} />}
 
-      {showCalendar && <CalendarView events={calendarItems} />}
+      {showCalendar && <CalendarView events={calendarItems} fullScreen={tab === "calendar"} />}
 
       {showTasks && (
         <TaskBoard
